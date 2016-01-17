@@ -1,0 +1,23 @@
+{
+  "name": "to-topojson",
+  "version": "1.0.0",
+  "description": "Convert multiple geo files and formats to TopoJSON",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Georeactor/to-topojson.git"
+  },
+  "author": "Georeactor",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Georeactor/to-topojson/issues"
+  },
+  "homepage": "https://github.com/Georeactor/to-topojson#readme",
+  "dependencies": {
+    "geoconverters": "^1.0.1",
+    "topojson": "^1.6.20"
+  }
+}
