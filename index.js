@@ -99,10 +99,9 @@ function convertFileWithFormat (filename, format, tj_file, callback, logger) {
         }
         convertFileWithFormat('mapdata.geojson', 'GeoJSON', tj_file, callback, logger);
       });
-    }
 
     // shapefiles converted using Calvin Metcalf's shpjs
-  } else if (format === 'shp') {
+    } else if (format === 'shp') {
       logger('converting shapefile to GeoJSON');
       if (filename.toLowerCase().indexOf('.shp') === filename.length - 4) {
         filename = filename.substring(0, fnamer.indexOf('.shp'));
