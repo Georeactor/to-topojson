@@ -130,7 +130,7 @@ function convertObject(gj, callback) {
     }
   }
   var tj = topojson.topology({ geo: gj }, {
-    'verbose': true,
+    'verbose': false,
     'pre-quantization': 1000000,
     'post-quantization': 10000,
     'coordinate-system': 'auto',
