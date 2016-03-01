@@ -1,6 +1,9 @@
 /* to-topojson */
 
 const fs = require('fs');
+
+const centroid = require('turf-centroid');
+
 const topojson = require('topojson');
 const converters = require('geoconverters');
 const convertTopoJSONtoGeoJSON = converters.convertTopoJSONtoGeoJSON;
@@ -8,7 +11,7 @@ const convertKMLtoGeoJSON = converters.convertKMLtoGeoJSON;
 const convertSHPtoGeoJSON = converters.convertSHPtoGeoJSON;
 const convertGeoJSONtoTopoJSON = converters.convertGeoJSONtoTopoJSON;
 
-function convertFile (filename, tj_file, callback, logger) {
+function convertFile (filename, tj_file, callback, logger, saveLabels) {
   // optional logger
   if (typeof logger !== 'function') {
     logger = function() {
@@ -28,19 +31,19 @@ function convertFile (filename, tj_file, callback, logger) {
     format = 'KML';
   } else if (fnamer.indexOf('kmz') > -1) {
     // KMZ zipping?
-    callback('Rename your KMZ file to ZIP, and extract out the KML file.');
+    return callback('Rename your KMZ file to ZIP, and extract out the KML file.');
   } else if (fnamer.indexOf('.shp') > -1) {
     format = 'SHP';
   }
 
   if (format) {
-    convertFileWithFormat(filename, format, tj_file, callback, logger);
+    convertFileWithFormat(filename, format, tj_file, callback, logger, saveLabels);
   } else {
     callback('Didn\'t recognize file extension / format.');
   }
 }
 
-function convertFileWithFormat (filename, format, tj_file, callback, logger) {
+function convertFileWithFormat (filename, format, tj_file, callback, logger, saveLabels) {
   // optional logger
   if (typeof logger !== 'function') {
     logger = function() {
@@ -53,41 +56,49 @@ function convertFileWithFormat (filename, format, tj_file, callback, logger) {
   if (fs.existsSync(filename)) {
     if (format === 'topojson') {
       logger('copying TopoJSON file');
-
-      // sourced from StackOverflow
-      // http://stackoverflow.com/questions/11293857/fastest-way-to-copy-file-in-node-js
-      function copyFile(source, target, cb) {
-        var cbCalled = false;
-
-        var rd = fs.createReadStream(source);
-        rd.on("error", function(err) {
-          done(err);
-        });
-        var wr = fs.createWriteStream(target);
-        wr.on("error", function(err) {
-          done(err);
-        });
-        wr.on("close", function(ex) {
-          done();
-        });
-        rd.pipe(wr);
-
-        function done(err) {
-          if (!cbCalled) {
-            cb(err);
-            cbCalled = true;
-          }
+      fs.readFile(filename, { encoding: 'utf-8' }, function(err, data) {
+        if (err) {
+          return callback(err);
         }
-      }
-      copyFile(filename, tj_file, function (err) {
-        callback(err || null);
+        var tj = JSON.parse(data);
+        fs.write('mapdata.topojson', JSON.stringify(tj), function(err) {
+          if (err) {
+            return callback(err);
+          }
+          logger('making GeoJSON copy at mapdata.geojson');
+          var key = Object.keys(tj.objects)[0];
+          var gj = topojson.feature(tj, tj.objects[key]);
+          fs.write('mapdata.geojson', JSON.stringify(gj), function(err) {
+            if (err) {
+              return callback(err);
+            }
+            if (saveLabels) {
+              logger('saving GeoJSON labels');
+              labelGeoJSON(gj, 'maplabels.geojson', function(err) {
+                callback(err);
+              });
+            } else {
+              callback();
+            }
+          });
+        });
       });
 
     // GeoJSON files can be made smaller using TopoJSON
     } else if (format === 'geojson') {
       logger('converting GeoJSON to TopoJSON');
       convertGeoJSONtoTopoJSON(filename, tj_file, function(err) {
-        callback(err || null);
+        if (err) {
+          return callback(err);
+        }
+        if (saveLabels) {
+          logger('saving GeoJSON labels');
+          labelGeoJSON(filename, 'maplabels.geojson', function(err) {
+            callback(err);
+          });
+        } else {
+          callback();
+        }
       });
 
     // KML using MapBox's togeojson module
@@ -146,8 +157,55 @@ function convertObject(gj, callback) {
   callback(null, tj);
 }
 
+function labelGeoJSON(source, result, callback) {
+  var gjlabel = function(gj) {
+    var labels = {
+      type: 'FeatureCollection',
+      features: []
+    };
+    var featurelabel = function(f) {
+      try {
+        var center = centroid(f);
+        if (center) {
+          center.properties = f.properties;
+          labels.features.push(center);
+        }
+      } catch(e) {
+        console.log(e);
+      }
+    };
+
+    if (gj.type === 'Feature') {
+      // single Feature
+      featurelabel(gj);
+    } else {
+      // FeatureCollection
+      for (var a = 0; a < gj.features.length; a++) {
+        featurelabel(gj.features[a]);
+      }
+    }
+    fs.writeFile(result, JSON.stringify(labels), function (err) {
+      callback(err);
+    });
+  };
+
+  if (typeof source === 'object') {
+    // direct GeoJSON object
+    gjlabel(source);
+  } else {
+    // filename
+    fs.readFile(source, { encoding: 'utf-8' }, function(err, data) {
+      if (err) {
+        return callback(err);
+      }
+      gjlabel(JSON.parse(data));
+    });
+  }
+}
+
 module.exports = {
   convertFile: convertFile,
   convertFileWithFormat: convertFileWithFormat,
-  convertObject: convertObject
+  convertObject: convertObject,
+  labelGeoJSON: labelGeoJSON
 };

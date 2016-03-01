@@ -6,6 +6,7 @@ Helps with:
 
 * Detecting file formats
 * Best TopoJSON settings (including: keeping GeoJSON properties)
+* Adding labels (using MapBox Turf.js)
 
 Supports:
 
@@ -30,6 +31,10 @@ convertFileWithFormat(input_file, 'GeoJSON', tj_file, function (err) {
 convertObject(geojson_object, function (err, topojson_object) {
   // returns error or TopoJSON object
 }, optional_logger);
+
+labelGeoJSON(geojson_object_or_filename, label_filename, function (err) {
+  // returns error or null
+});
 ```
 
 ## License
