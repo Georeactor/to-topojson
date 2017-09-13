@@ -1,5 +1,7 @@
 # to-topojson
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/Georeactor/to-topojson.svg)](https://greenkeeper.io/)
+
 Most geo converters stop at GeoJSON, so you need to multiple codes together to convert to TopoJSON. This eliminates the extra step.
 
 Helps with:
